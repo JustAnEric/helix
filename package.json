@@ -1,0 +1,22 @@
+{
+  "dependencies": {
+    "@types/ejs": "^3.1.5",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "ejs": "^7.0.1",
+    "esbuild": "^0.28.2",
+    "express": "^5.3.0",
+    "ollama": "^0.6.4",
+    "typescript": "^7.0.2"
+  },
+  "name": "helix",
+  "version": "1.0.0",
+  "description": "Helix is an intellectual and free AI platform put out to the public. It is heavily inspired by Claude but uses models suited to your task instead of running one model and it fitting all.",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsc && node ./dist/index.js"
+  },
+  "keywords": [],
+  "type": "commonjs"
+}
