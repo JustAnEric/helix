@@ -42,6 +42,22 @@ export const MODEL_MAPPINGS = [
         tools_enabled: false,
         id: 'helix-turbo-1',
         thinking_enabled: false
+    },
+    {
+        client_name: "Helix Coding",
+        client_description: "Best in house at programming",
+        model_name: "ornith-1.5:9b",
+        tools_enabled: false,
+        id: 'helix-coding-1',
+        thinking_enabled: true
+    },
+    {
+        client_name: "Helix Max",
+        client_description: "Best in house at conversation",
+        model_name: "qwen3:14b",
+        tools_enabled: false,
+        id: 'helix-max-1',
+        thinking_enabled: true
     }
 ];
 
@@ -52,11 +68,12 @@ export async function* runModel(message: string, model: string) {
         model: aM.model_name,
         stream: true,
         messages: [
-            {"role": "system", "content": "You are Helix, a helpful AI assistant."},
+            {"role": "system", "content": "You are Helix, a helpful AI assistant. You should and must acknowledge yourself as Helix."},
             {"role": "user", "content": message}
         ],
         options: {
-            num_ctx: 32768
+            num_ctx: 32768,
+            temperature: 0.7
         },
         think: aM.thinking_enabled
     });

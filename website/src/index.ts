@@ -78,14 +78,20 @@ async function sendMessage() {
 
                 try {
                     const parsed = JSON.parse(dataStr);
-                    const c = parsed.text || '';
-                    accumulatedText += c;
-                    if (typeof marked !== 'undefined') {
-                        msgDiv.innerHTML = await marked.parse(accumulatedText);
-                    } else {
-                        msgDiv.textContent = accumulatedText;
+                    if (parsed.type === "chunk:text") {
+                        const c = parsed.text || '';
+                        accumulatedText += c;
+                        if (typeof marked !== 'undefined') {
+                            msgDiv.innerHTML = await marked.parse(accumulatedText);
+                        } else {
+                            msgDiv.textContent = accumulatedText;
+                        }
+                        scrollToBottom();
+                    } else if (parsed.type === "chunk:think_start") {
+                        msgDiv.innerHTML = `<div class="thinking-indicator">Thinking...</div>`;
+                    } else if (parsed.type === "chunk:think_end") {
+                        msgDiv.querySelectorAll('.thinking-indicator').forEach(a => a.remove());
                     }
-                    scrollToBottom();
                 } catch (e) {
                     console.error('Error parsing chunk:', e);
                 }

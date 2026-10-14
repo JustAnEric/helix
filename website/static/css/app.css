@@ -8,6 +8,11 @@
     src: url(/fonts/Geist.ttf) format(truetype);
 }
 
+@font-face {
+    font-family: 'Inter';
+    src: url(/fonts/Inter.ttf);
+}
+
 * {
     box-sizing: border-box; /*ESSENTIAL! :)*/
 }
@@ -400,5 +405,32 @@ main.app .content {
 
 .input-area .notice {
     color: #444;
-    font-family: 'Geist';
+    font-family: 'Inter';
+}
+
+.message .thinking-indicator {
+    font-weight: 600;
+    background: linear-gradient(
+        90deg, 
+        #333333 0%, 
+        #888888 25%, 
+        #ffffff 50%, 
+        #888888 75%, 
+        #333333 100%
+    );
+    background-size: 200% auto;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: scroll-thinking-gradient 4s linear infinite;
+}
+
+@keyframes scroll-thinking-gradient {
+    0% {
+        background-position: 200% center;
+    }
+    100% {
+        background-position: 0% center;
+    }
 }
