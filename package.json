@@ -6,6 +6,7 @@
     "ejs": "^7.0.1",
     "esbuild": "^0.28.2",
     "express": "^5.3.0",
+    "marked": "^18.1.1",
     "ollama": "^0.6.4",
     "typescript": "^7.0.2"
   },
@@ -15,8 +16,12 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsc && node ./dist/index.js"
+    "dev": "tsc && node ./dist/index.js",
+    "build-site": "node ./build-site.esbuild.js"
   },
   "keywords": [],
-  "type": "commonjs"
+  "type": "module",
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
 }
