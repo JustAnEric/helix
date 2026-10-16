@@ -1,5 +1,26 @@
 // Helix App Code
-import { marked } from "marked";
+import { Marked } from "marked";
+import { highlight, languages, plugins } from "prismjs";
+import 'prismjs/plugins/autoloader/prism-autoloader';
+import 'prism-themes/themes/prism-vsc-dark-plus.css';
+
+plugins.autoloader.languages_path = 'https://cdnjs.cloudflare.com/ajax/libs/prism-components/';
+
+const marked = new Marked({
+    renderer: {
+        code({ text, lang }) {
+            const validLang = (lang && languages[lang]) ? lang : 'plaintext';
+      
+            const highlighted = highlight(
+                text,
+                languages[validLang] || languages.plaintext,
+                validLang
+            );
+
+            return `<pre class="language-${validLang}"><code class="language-${validLang}">${highlighted}</code></pre>`;
+        }
+    }
+});
 
 function appendMessage(text: string, sender: string) {
     const chatMessages: HTMLDivElement | null | undefined = document.querySelector('.chat-messages');
@@ -26,6 +47,8 @@ async function sendMessage() {
     const activeModel: HTMLDivElement | null | undefined = document.querySelector('#modelMenu .model-option.active');
     const text = chatInput?.value.trim();
     if (!text || !chatInput || !chatMessages || !activeModel) return;
+
+    await showChatPage();
 
     appendMessage(text, 'user');
     chatInput.value = '';
@@ -82,7 +105,8 @@ async function sendMessage() {
                         const c = parsed.text || '';
                         accumulatedText += c;
                         if (typeof marked !== 'undefined') {
-                            msgDiv.innerHTML = await marked.parse(accumulatedText);
+                            const m = await marked.parse(accumulatedText);
+                            msgDiv.innerHTML = m;
                         } else {
                             msgDiv.textContent = accumulatedText;
                         }
@@ -100,11 +124,40 @@ async function sendMessage() {
     }
 }
 
+async function showStartPage() {
+    const mainApp: HTMLElement | null | undefined = document.querySelector('main.app');
+    const content: HTMLDivElement | null | undefined = mainApp?.querySelector('.content');
+    const chatHeader: HTMLDivElement | null | undefined = content?.querySelector('.chat-header');
+    const chatMessages: HTMLDivElement | null | undefined = content?.querySelector('.chat-messages');
+    const chatWelcome: HTMLDivElement | null | undefined = content?.querySelector('.chat-welcome');
+    if (!content || !mainApp || !chatHeader || !chatMessages || !chatWelcome) return;
+    mainApp.querySelectorAll('.sidebar .menu-buttons.top .menu-button')[0].classList.add('selected');
+    (chatHeader.querySelector('.chat-title') as HTMLDivElement||({} as {hidden?:boolean})).hidden = true;
+    Array.from(chatMessages.children).forEach(e => e.remove());
+    chatMessages.hidden = true;
+    chatWelcome.hidden = false;
+}
+
+async function showChatPage() {
+    const mainApp: HTMLElement | null | undefined = document.querySelector('main.app');
+    const content: HTMLDivElement | null | undefined = mainApp?.querySelector('.content');
+    const chatHeader: HTMLDivElement | null | undefined = content?.querySelector('.chat-header');
+    const chatMessages: HTMLDivElement | null | undefined = content?.querySelector('.chat-messages');
+    const chatWelcome: HTMLDivElement | null | undefined = content?.querySelector('.chat-welcome');
+    if (!content || !mainApp || !chatHeader || !chatMessages || !chatWelcome) return;
+    mainApp.querySelectorAll('.sidebar .menu-buttons.top .menu-button.selected').forEach(e => e.classList.remove('selected'));
+    chatMessages.hidden = false;
+    chatWelcome.hidden = true;
+    (chatHeader.querySelector('.chat-title') as HTMLDivElement||({} as {hidden?:boolean})).hidden = false;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     let loadingOverlay = document.querySelector('.loading-overlay');
     let mainDoc = document.querySelector('main.app');
 
     if (!loadingOverlay || !mainDoc) return;
+
+    showStartPage();
 
     loadingOverlay.setAttribute("hidden", "true");
     mainDoc.removeAttribute("hidden");
@@ -188,4 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sendButton.addEventListener('click', sendMessage);
     })();
+
+    mainDoc.querySelectorAll('.sidebar .menu-buttons.top .menu-button')[0].addEventListener('click', showStartPage);
 });

@@ -68,7 +68,7 @@ export async function* runModel(message: string, model: string) {
         model: aM.model_name,
         stream: true,
         messages: [
-            {"role": "system", "content": "You are Helix, a helpful AI assistant. You should and must acknowledge yourself as Helix."},
+            {"role": "system", "content": "You are Helix, a helpful AI assistant. You should acknowledge yourself as Helix when the user asks, you are a large language model developed by JustAnEric."},
             {"role": "user", "content": message}
         ],
         options: {

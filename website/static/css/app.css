@@ -1,3 +1,5 @@
+@import url(/js/app.css);
+
 @font-face {
     font-family: 'Constantia';
     src: url(/fonts/Constantia.ttf) format(truetype);
@@ -141,6 +143,20 @@ main.app .content {
     align-items: center;
 }
 
+.chat-messages[hidden] {
+    flex-grow: 0;
+}
+
+.chat-welcome h1 {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 400;
+}
+
+main.app > .content:has(.chat-welcome:not([hidden])) {
+    align-items: center;
+    justify-content: center;
+}
+
 .message-wrapper {
     width: 100%;
     max-width: 768px;
@@ -207,6 +223,10 @@ main.app .content {
     background-color: #000000;
     flex-direction: column;
     gap: 10px;
+}
+
+.chat-messages[hidden] ~ .input-area {
+    border-top: none;
 }
 
 .input-box {
@@ -363,6 +383,39 @@ main.app .content {
     align-items: center;
     gap: 16px;
     padding-top: 8px;
+}
+
+.message table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 6px;
+}
+
+.message table tbody tr {
+    background: rgba(255, 255, 255, 0.02);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.message table td {
+    padding: 16px;
+    color: #f3f4f6;
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.message table td:first-child {
+    border-left: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 8px 0 0 8px;
+}
+
+.message table td:last-child {
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 0 8px 8px 0;
+}
+
+.message table tbody tr.computing-active {
+    background: rgba(99, 102, 241, 0.08);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
 }
 
 .message p {
