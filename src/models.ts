@@ -1,4 +1,14 @@
 import { Ollama } from "ollama";
+import { remark } from "remark";
+import removeComments from 'remark-remove-comments';
+import { readFileSync } from "node:fs";
+
+const SYSTEM_PROMPT = remark()
+    .use(removeComments)
+    .process(readFileSync('PROMPT.md','utf-8'), (err, file) => {
+        if (err) throw err;
+        console.log(String(file));
+    });
 
 const OLLAMA = new Ollama({ host: '192.168.3.211:11434' });
 
@@ -68,7 +78,7 @@ export async function* runModel(message: string, model: string) {
         model: aM.model_name,
         stream: true,
         messages: [
-            {"role": "system", "content": "You are Helix, a helpful AI assistant. You should acknowledge yourself as Helix when the user asks, you are a large language model developed by JustAnEric."},
+            {"role": "system", "content": SYSTEM_PROMPT || "You are Helix, a helpful personal assistant."},
             {"role": "user", "content": message}
         ],
         options: {

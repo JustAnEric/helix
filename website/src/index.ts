@@ -1,6 +1,7 @@
 // Helix App Code
 import { Marked } from "marked";
 import { highlight, languages, plugins } from "prismjs";
+import axios from "axios";
 import 'prismjs/plugins/autoloader/prism-autoloader';
 import 'prism-themes/themes/prism-vsc-dark-plus.css';
 
@@ -21,6 +22,86 @@ const marked = new Marked({
         }
     }
 });
+
+async function isLoggedIn() {
+    const token = localStorage.getItem('helio.token');
+
+    if (!token) return false;
+
+    let tokenCheck;
+    try {
+        tokenCheck = await axios.get(`/api/tokens`, {
+            headers: { Authorization: `Bearer ${token}` },
+            responseType: 'json'
+        });
+    } catch(err: any) {
+        return false;
+    }
+
+    const jsonob = tokenCheck.data;
+
+    if (jsonob.success) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function getCanvasFingerprint_gputest() {
+    try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return '';
+        
+        ctx.textBaseline = "top";
+        ctx.font = "14px 'Arial'";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = "#f60";
+        ctx.fillRect(125,1,62,20);
+        ctx.fillStyle = "#069";
+        ctx.fillText("TokenAbusePrevention!💪", 2, 15);
+        ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+        ctx.fillText("TokenAbusePrevention!💪", 4, 17);
+        
+        return canvas.toDataURL();
+    } catch (e) {
+        return '';
+    }
+}
+
+async function createToken() {
+    const tokenRequest = await axios.post(`/api/tokens`, {
+        clientTime: {
+            tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            offs: new Date().getTimezoneOffset(),
+            now: Date.now(),
+            pnow: performance.now()
+        },
+        computer: { // hardware profiling to prevent token abuse
+            core: navigator.hardwareConcurrency,
+            mem: 'deviceMemory' in navigator ? navigator.deviceMemory : undefined,
+            gpuSig: getCanvasFingerprint_gputest(),
+            screen: `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`
+        },
+        lang: navigator.language,
+        br: 'userAgentData' in navigator ? (navigator.userAgentData as any).brands : [],
+        mob: 'userAgentData' in navigator ? (navigator.userAgentData as any).mobile : false
+    }, { responseType: 'json' });
+
+    const jsonob = tokenRequest.data;
+
+    if (jsonob.dev_hash) {
+        localStorage.setItem('helio.dhash', jsonob.dev_hash);
+    } else {
+        localStorage.removeItem('helio.dhash');
+    }
+
+    if (jsonob.token) {
+        localStorage.setItem('helio.token', jsonob.token);
+    } else {
+        localStorage.removeItem('helio.token');
+    }
+}
 
 function appendMessage(text: string, sender: string) {
     const chatMessages: HTMLDivElement | null | undefined = document.querySelector('.chat-messages');
@@ -65,7 +146,7 @@ async function sendMessage() {
 
     const streamResponse = await fetch('/api/model', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('helio.token')}` },
         body: JSON.stringify({ message: text, model: activeModel.dataset.model })
     });
 
@@ -151,13 +232,17 @@ async function showChatPage() {
     (chatHeader.querySelector('.chat-title') as HTMLDivElement||({} as {hidden?:boolean})).hidden = false;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     let loadingOverlay = document.querySelector('.loading-overlay');
     let mainDoc = document.querySelector('main.app');
 
     if (!loadingOverlay || !mainDoc) return;
 
     showStartPage();
+
+    if (!(await isLoggedIn())) {
+        await createToken();
+    }
 
     loadingOverlay.setAttribute("hidden", "true");
     mainDoc.removeAttribute("hidden");
