@@ -141,6 +141,7 @@ main.app .content {
     flex-direction: column;
     gap: 24px;
     align-items: center;
+    overflow-anchor: none;
 }
 
 .chat-messages[hidden] {
@@ -392,6 +393,45 @@ main.app > .content:has(.chat-welcome:not([hidden])) {
     align-items: center;
     gap: 16px;
     padding-top: 8px;
+}
+
+.message .tool-exec-details {
+    display: flex;
+    flex-direction: column;
+    background: #2b2b2b;
+    padding: 10px;
+    border-radius: 9px;
+}
+
+.message .tool-exec-details .tool-exec-summary {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
+    border: none;
+    padding-bottom: 4px;
+    cursor: pointer;
+    font-family: 'Constantia';
+    transition: all 0.2s ease;
+}
+
+.message .tool-exec-details.open .tool-exec-summary {
+    border-bottom: 1px #555555 solid;
+}
+
+.message .tool-exec-details .tool-exec-content {
+    display: none;
+}
+
+@keyframes opentoolanim {
+    0% { opacity: 0; }
+    50% { opacity: 0.25; }
+    100% { opacity: 1; }
+}
+
+.message .tool-exec-details.open .tool-exec-content {
+    display: block;
+    animation: opentoolanim 0.2s linear;
 }
 
 .message table {

@@ -2,7 +2,7 @@
 import axios from "axios";
 import 'prism-themes/themes/prism-vsc-dark-plus.css';
 import { Marked } from 'marked';
-import { highlight, languages, plugins } from "prismjs";
+import { highlightElement, languages, plugins } from "prismjs";
 import 'prismjs/plugins/autoloader/prism-autoloader';
 
 plugins.autoloader.languages_path = 'https://cdnjs.cloudflare.com/ajax/libs/prism-components/';
@@ -12,17 +12,18 @@ const marked = new Marked({
         code({ text, lang }) {
             const validLang = (lang && languages[lang]) ? lang : 'plaintext';
             
-            const highlighted = highlight(
+            /*const highlighted = highlight(
                 text,
                 languages[validLang] || languages.plaintext,
                 validLang
-            );
+            );*/
 
-            return `<pre class="language-${validLang}"><code class="language-${validLang}">${highlighted}</code></pre>`;
+            return `<pre class="language-${validLang}"><code class="language-${validLang}" data-raw="${encodeURIComponent(text)}"></code></pre>`;
         }
     }
 });
 
+// ICONS FROM SLACK'S BLOCK KIT (i found them so pretty...)
 const checkIcon = (width: number, height: number) => `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="${width}" height="${height}">
     <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M10 19a9 9 0 1 0 0-18 9 9 0 0 0 0 18m3.722-11.315a.75.75 0 1 0-1.144-.97l-4.125 4.863-1.141-1.611a.75.75 0 1 0-1.224.867l1.7 2.4a.75.75 0 0 0 1.184.051z"/>
@@ -165,7 +166,14 @@ function appendMessage(text: string, sender: string, options: AppendMessageOptio
     wrapper.className = `message-wrapper ${sender}`;
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${sender}`;
-    if (text) msgDiv.innerHTML = marked.parse(text) as string;
+    if (text) {
+        msgDiv.innerHTML = marked.parse(text) as string;
+        msgDiv.querySelectorAll('code[data-raw]').forEach(block => {
+            block.textContent = decodeURIComponent(block.getAttribute('data-raw')!);
+            block.removeAttribute('data-raw');
+            highlightElement(block);
+        });
+    }
     wrapper.appendChild(msgDiv);
     chatMessages.appendChild(wrapper);
     scrollToBottom(chatMessages);
@@ -179,15 +187,25 @@ function appendMessage(text: string, sender: string, options: AppendMessageOptio
             msgDiv.innerHTML += `
             <div class="tool-exec-details" data-id="${tool.id}">
                 <div class="tool-exec-summary">${tool.status == "success" ? checkIcon(15, 15) : tool.status == "error" ? warningIcon(15, 15) : ''} <span>${tool.name}</span></div>
-                <div class="tool-exec-content">${`<pre><code>${JSON.stringify(tool.output, undefined, 4)}</code></pre>` || tool.error}</div>
+                <div class="tool-exec-content">${`<pre><code>${JSON.stringify(tool.input, undefined, 4)}</code></pre><pre><code>${JSON.stringify(tool.output, undefined, 4)}</code></pre>` || tool.error}</div>
             </div>
             `;
+            const e1 = Array.from(msgDiv.querySelectorAll('.tool-exec-details')).at(-1);
+            e1
+                ?.querySelector('.tool-exec-summary')
+                ?.addEventListener('click', () => {
+                    e1.classList.toggle('open');
+                });
         }
     }
 }
 
 function scrollToBottom(chatMessages: HTMLDivElement) {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    const threshold = 100;
+    const isNearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < threshold;
+    if (isNearBottom) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 }
 
 async function sendMessage() {
@@ -233,6 +251,7 @@ async function sendMessage() {
     let accumulatedText = '';
     let tps = 0.0;
     let elapsedSeconds = 0.0;
+    //let rafPending = false;
 
     msgDiv.innerHTML = '';
 
@@ -268,7 +287,14 @@ async function sendMessage() {
                         tps = parsed.tps;
                         elapsedSeconds = parsed.elapsedSeconds;
                         msgDiv.innerHTML = marked.parse(accumulatedText) as string;
-                        scrollToBottom(chatMessages);
+                        requestAnimationFrame(() => {
+                            msgDiv.querySelectorAll('code[data-raw]').forEach(block => {
+                                block.textContent = decodeURIComponent(block.getAttribute('data-raw')!);
+                                block.removeAttribute('data-raw');
+                                highlightElement(block);
+                            });
+                            scrollToBottom(chatMessages);
+                        });
                     } else if (parsed.type === "chunk:think_start") {
                         msgDiv.innerHTML = `<div class="thinking-indicator">Thinking...</div>`;
                     } else if (parsed.type === "chunk:think_end") {
@@ -360,6 +386,10 @@ async function showChatPageWithConversation(id: string) {
             appendMessage(msg.content, msg.role);
         }
     }
+
+    chatMessages.onscroll = () => {
+        console.log('scroll event, scrollTop:', chatMessages.scrollTop, 'scrollHeight:', chatMessages.scrollHeight, 'clientHeight:', chatMessages.clientHeight);
+    };
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
