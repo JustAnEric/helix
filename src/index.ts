@@ -6,6 +6,10 @@ import { MODEL_MAPPINGS, runModel } from "./models.js";
 import jwt from "jsonwebtoken";
 import { v7 as uuidv7 } from "uuid";
 import util from "util";
+import { ObjectId } from 'mongodb';
+import { connectDB, conversations } from './db.js';
+import { runAgent } from './agent.js';
+
 
 const app = express();
 
@@ -30,6 +34,140 @@ app.get("/", (request: Request, response: Response) => {
     response.render('index');
 });
 
+app.get("/conversations/:id", (request: Request, response: Response) => {
+    response.render('index');
+});
+
+app.get("/api/conversations", async (request: Request, response: Response) => {
+    const token = request.headers.authorization;
+    const cfConnectingIp = request.headers['cf-connecting-ip'];
+
+    if (!cfConnectingIp) {
+        return response.status(400).json({
+            success: false,
+            error: 'No CF',
+            cd: '(?)'
+        });
+    }
+
+    let jwtV: any;
+
+    if (!token) {
+        return response.status(401).json({
+            success: false,
+            error: 'No token',
+            cd: '(!)'
+        });
+    } else {
+        const jwtStr = token.split(/\s/, 2)[1];
+        if (!jwtStr) return response.status(401).json({
+            success: false,
+            error: 'No token',
+            cd: '(!!)'
+        });
+
+        try {
+            jwtV = await verifyJwtAsync(jwtStr, process.env.JWT_SECRET || 'fallback', {
+                issuer: 'https://helix.auth.erikku.page', audience: 'https://helix.erikku.page'
+            });
+
+            if ((jwtV as any).ip !== cfConnectingIp) { // some client security
+                return response.status(401).json({
+                    success: false,
+                    error: 'Invalid token',
+                    cd: '(-)'
+                });
+            }
+        } catch (err: any) {
+            console.error("JWT Verification Failed:", err.message);
+            return response.status(401).json({
+                success: false,
+                error: 'Invalid token',
+                cd: '(-)'
+            });
+        }
+    }
+
+    const owner = jwtV.type === 'guest'
+        ? { corrId: jwtV.correlation }
+        : { userId: new ObjectId(jwtV.userId) };
+
+    const list = await conversations
+        .find(owner)
+        .sort({ updatedAt: -1 })
+        .project({ title: 1, status: 1, updatedAt: 1 })
+        .toArray();
+
+    response.json(list);
+});
+
+app.get("/api/conversations/:id", async (request: Request, response: Response) => {
+    const { id } = request.params;
+
+    if (!id) return response.status(400).json({ error: 'unknown? how did this happen :D' });
+
+    const token = request.headers.authorization;
+    const cfConnectingIp = request.headers['cf-connecting-ip'];
+
+    if (!cfConnectingIp) {
+        return response.status(400).json({
+            success: false,
+            error: 'No CF',
+            cd: '(?)'
+        });
+    }
+
+    let jwtV: any;
+
+    if (!token) {
+        return response.status(401).json({
+            success: false,
+            error: 'No token',
+            cd: '(!)'
+        });
+    } else {
+        const jwtStr = token.split(/\s/, 2)[1];
+        if (!jwtStr) return response.status(401).json({
+            success: false,
+            error: 'No token',
+            cd: '(!!)'
+        });
+
+        try {
+            jwtV = await verifyJwtAsync(jwtStr, process.env.JWT_SECRET || 'fallback', {
+                issuer: 'https://helix.auth.erikku.page', audience: 'https://helix.erikku.page'
+            });
+
+            if ((jwtV as any).ip !== cfConnectingIp) { // some client security
+                return response.status(401).json({
+                    success: false,
+                    error: 'Invalid token',
+                    cd: '(-)'
+                });
+            }
+        } catch (err: any) {
+            console.error("JWT Verification Failed:", err.message);
+            return response.status(401).json({
+                success: false,
+                error: 'Invalid token',
+                cd: '(-)'
+            });
+        }
+    }
+
+    const owner = jwtV.type === 'guest'
+        ? { corrId: jwtV.correlation }
+        : { userId: new ObjectId(jwtV.userId) };
+
+    const convo = await conversations.findOne({
+        _id: new ObjectId(id.toString()),
+        ...owner
+    });
+
+    if (!convo) return response.status(404).json({ error: "Not found" });
+    response.json(convo);
+});
+
 app.get("/api/models", (request: Request, response: Response) => {
     response.json({
         success: true,
@@ -50,6 +188,8 @@ app.post("/api/model", async (request: Request, response: Response) => {
         });
     }
 
+    let jwtV: any;
+
     if (!token) {
         return response.status(401).json({
             success: false,
@@ -65,7 +205,7 @@ app.post("/api/model", async (request: Request, response: Response) => {
         });
 
         try {
-            const jwtV = await verifyJwtAsync(jwtStr, process.env.JWT_SECRET || 'fallback', {
+            jwtV = await verifyJwtAsync(jwtStr, process.env.JWT_SECRET || 'fallback', {
                 issuer: 'https://helix.auth.erikku.page', audience: 'https://helix.erikku.page'
             });
 
@@ -93,16 +233,41 @@ app.post("/api/model", async (request: Request, response: Response) => {
         });
     }
 
+    const owner = jwtV.type === 'guest'
+        ? { deviceHash: jwtV.hash, corrId: jwtV.correlation }
+        : { userId: new ObjectId(jwtV.userId) };
+    let convo = conversationId ? await conversations.findOne({ _id: new ObjectId(conversationId), ...owner }) : null;
+
+    if (!convo) {
+        const result = await conversations.insertOne({
+            ...owner,
+            title: message.slice(0, 50),
+            status: "running",
+            messages: [],
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
+        convo = await conversations.findOne({ _id: result.insertedId });
+    } else {
+        await conversations.updateOne(
+        { _id: convo._id },
+        { $set: { status: "running", updatedAt: new Date() } }
+        );
+    }
+
+    await conversations.updateOne(
+        { _id: convo!._id },
+        { $push: { messages: { role: "user", content: message, toolCalls: [], thinking: null, createdAt: new Date() } } }
+    );
+
     response.setHeader('Content-Type', 'text/event-stream');
     response.setHeader('Cache-Control', 'no-cache');
     response.setHeader('Connection', 'keep-alive');
     response.setHeader('X-Accel-Buffering', 'no');
 
-    const modelRun = runModel(message, model);
+    response.write(`data: ${JSON.stringify({ type: "meta", conversationId: convo!._id, conversationTitle: convo!.title })}\n\n`);
 
-    for await (const line of modelRun) {
-        response.write(line);
-    }
+    await runAgent(convo?._id!, owner, response, model);
 
     request.on('close', () => {
         response.end();
@@ -142,6 +307,7 @@ app.post("/api/tokens", async (request: Request, response: Response) => {
 
     return response.json({
         dev_hash: hash,
+        user_id: correlation,
         token
     });
 });
@@ -197,4 +363,6 @@ app.get("/api/tokens", async (request: Request, response: Response) => {
     }
 });
 
-app.listen(80, '0.0.0.0');
+app.listen(80, '0.0.0.0', async() => {
+    await connectDB();
+});

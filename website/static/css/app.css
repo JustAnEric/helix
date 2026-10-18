@@ -1,4 +1,4 @@
-@import url(/js/app.css);
+@import url(/js/index.css);
 
 @font-face {
     font-family: 'Constantia';
@@ -227,6 +227,15 @@ main.app > .content:has(.chat-welcome:not([hidden])) {
 
 .chat-messages[hidden] ~ .input-area {
     border-top: none;
+}
+
+.input-area .statistics {
+    max-width: 768px;
+    min-width: 768px;
+    text-align: left;
+    font-family: 'Geist';
+    letter-spacing: 1.10px;
+    color: #444;
 }
 
 .input-box {

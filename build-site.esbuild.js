@@ -5,8 +5,8 @@ await esb.build({
     bundle: true,
     minify: true,
     sourcemap: false,
-    target: ['es2020'],
     platform: 'browser',
     target: ['chrome58'],
-    outfile: 'website/static/js/app.js',
+    outfile: undefined,
+    outdir: 'website/static/js'
 }).catch(() => process.exit(1));
