@@ -24,4 +24,11 @@ SEARXNG_URI=http://...
 
 Yeah, that's all the env params. I won't go into detail about what these mean, they're self-explanatory with how they're used. `SEARXNG_URI` is optional, it's used for the web tools, but the rest isn't though.
 
+## Credits
+
+Icons were used from:
+
+* Slack's Block Kit Builder (because I really liked the check mark and warning SVGs from when I was working on [jae](https://github.com/JustAnEric/jae))
+* [Hack Club iconset](https://icons.hackclub.com/) (they provided me with a new chat button icon)
+
 **This is only a MVP (minimum-viable product) and it should absolutely not be taken as a finished project.**
